@@ -1,0 +1,24 @@
+FROM openjdk:17-alpine AS BUILD
+
+ENV APP_HOME=/usr/app
+RUN mkdir $APP_HOME
+RUN mkdir $APP_HOME/gradle-cache
+ENV GRADLE_USER_HOME = $APP_HOME/gradle-cache
+WORKDIR $APP_HOME
+
+COPY build.gradle.kts $APP_HOME
+COPY settings.gradle.kts $APP_HOME
+COPY gradle/ $APP_HOME/gradle
+COPY gradlew $APP_HOME
+
+RUN $APP_HOME/gradlew --refresh-dependencies --info --build-cache compileJava
+RUN ls $APP_HOME/gradle-cache -la
+COPY src ./src
+RUN $APP_HOME/gradlew build --info -x test
+
+FROM openjdk:17-alpine
+ENV APP_HOME=/usr/app
+WORKDIR $APP_HOME
+
+COPY --from=BUILD $APP_HOME/build/libs/*.jar .
+
